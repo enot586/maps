@@ -23,19 +23,19 @@ public:
   {  }
 
   //Iterators:
-  typename T::iterator begin() noexcept
+  typename T::iterator begin() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.begin();
   }
 
-  auto end() noexcept
+  auto end() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.begin();
   }
 
-  auto cbegin() noexcept
+  auto cbegin() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.cbegin();
@@ -47,7 +47,7 @@ public:
     return data.cbegin(n);
   }
 
-  auto cend() noexcept
+  auto cend() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.cend();
@@ -61,7 +61,10 @@ public:
 
   template <class... Args>
   std::pair<typename T::iterator, bool> emplace ( Args&&... args )
-  { return data.emplace( args ...  ); }
+  {
+    std::lock_guard<std::mutex> lock(total_mutex);
+    return data.emplace( args ...  );
+  }
 
   //Modifiers:
   void insert( const typename T::value_type& val )
@@ -84,16 +87,28 @@ public:
 
   //Element access:
   auto& operator[](const typename T::key_type& k)
-  { return data[k]; }
+  {
+    std::lock_guard<std::mutex> lock(total_mutex);
+    return data[k];
+  }
 
   auto& operator[](typename T::key_type&& k)
-  { return data[k]; }
+  {
+    std::lock_guard<std::mutex> lock(total_mutex);
+    return data[k];
+  }
 
   auto& at ( const typename T::value_type& k )
-  { return data.at(k); }
+  {
+    std::lock_guard<std::mutex> lock(total_mutex);
+    return data.at(k);
+  }
 
   const auto& at ( const typename T::value_type& k ) const
-  { return data.at(k); }
+  {
+    std::lock_guard<std::mutex> lock(total_mutex);
+    return data.at(k);
+  }
 
   //Capacity:
   bool empty() const noexcept
@@ -102,26 +117,26 @@ public:
     return data.empty();
   }
 
-  auto size() noexcept
+  auto size() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.size();
   }
 
-  auto max_size() noexcept
+  auto max_size() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.max_size();
   }
 
   //Buckets:
-  auto bucket_count() noexcept
+  auto bucket_count() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.bucket_count();
   }
 
-  auto max_bucket_count() noexcept
+  auto max_bucket_count() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.max_bucket_count();
@@ -134,7 +149,7 @@ public:
     data.reserve(n);
   }
 
-  float load_factor() noexcept
+  float load_factor() const noexcept
   {
     std::lock_guard<std::mutex> lock(total_mutex);
     return data.load_factor();
@@ -143,12 +158,12 @@ public:
   void rehash( typename T::size_type n )
   {
     std::lock_guard<std::mutex> lock(total_mutex);
-    return data.load_factor();
+    return data.rehash(n);
   }
 
 private:
   T& data;
-  std::mutex total_mutex;
+  mutable std::mutex total_mutex;
 };
 
 template <typename __Key, typename __Value>

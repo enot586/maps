@@ -27,7 +27,6 @@ int main( int /*argc*/, char*[]/*argv[]*/ )
   t3::map<std::string, size_t> m3;
   TestInsert(m3);
 
-
   std::cout << "****************************************" << std::endl;
 
   return  0;
