@@ -10,14 +10,14 @@ namespace t1
 
 /**
  *  Первый вариант трактовки условия:
- *  Необходимо реализовать контейнер, который превосходил бы на многопоточке
- *  выбранный стандартный(map или unordered_map).
- *  Попытка получить выйгрыш в производительности за счет распараллеливания доступа
+ *  Необходимо реализовать контейнер, который бы превосходил своего
+ *  одноименника в std на многопоточке.
+ *  Попытка получить выйгрыш над std::unordered_map в производительности
+ *  за счет распараллеливания доступа
  */
 template<typename _Key, typename _Value, size_t _Super_bucket_number=10>
 class map
 {
-
 public:
   typedef std::unordered_map<size_t, _Value> bucket_data_model;
   typedef typename bucket_data_model::iterator::iterator_category  bucket_iterator_category;
@@ -37,6 +37,10 @@ public:
       typedef  typename bucket_data_model::iterator        pointer;
       typedef  bucket_iterator_category                    iterator_category;
       typedef  typename bucket_data_model::difference_type difference_type;
+
+      typedef _Key key_type;
+      typedef size_t size_type;
+      typedef std::pair< _Key, _Value > value_type;
 
       iterator(map& base, size_t interval, pointer ptr) :
         base_(base), interval_(interval), ptr_(ptr)  { }
@@ -74,29 +78,26 @@ public:
       map& base_;
       size_t interval_;
       pointer ptr_;
-
   };
 
-  using key_type    = _Key;
-  using size_type   = size_t;
-  using value_type  = std::pair< _Key, _Value >;
-
-  map() :
-    intervals_(super_bucket_count_),
-    begin_( *this, 0, intervals_[0].v.begin() ),
-    end_( *this, (intervals_.size()-1), intervals_[9].v.begin() )
+  map() : intervals_(super_bucket_count_)
   {  }
 
   ~map()
   {  }
 
   //Iterators:
-
   iterator begin() noexcept
-  { return begin_; }
+  {
+    return iterator( *this, 0, intervals_.begin()->v.begin() );
+  }
 
   iterator end() noexcept
-  { return end_; }
+  {
+    return iterator( *this,
+                     std::distance( intervals_.begin(), intervals_.end() )-1,
+                     intervals_.end()->v.end() );
+  }
 
   //Modifiers:
   void insert( const value_type& val )
@@ -191,8 +192,6 @@ public:
 
 private:
   std::vector< super_bucket > intervals_;
-  iterator begin_;
-  iterator end_;
   static const size_t super_bucket_count_ = _Super_bucket_number;
   std::mutex total_mutex_;
   size_t total_elements_count_;

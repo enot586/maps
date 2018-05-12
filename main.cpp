@@ -12,35 +12,39 @@
 
 int main( int /*argc*/, char*[]/*argv[]*/ )
 {
-  test_insert test_multithreading_insert(100);
+  static const size_t NUMBER_OF_THREADS      = 100;
+  static const size_t NUMBER_OF_MAP_ELEMENTS = 1000;
+
+  test_insert test_multithreading_insert(NUMBER_OF_THREADS);
 
   std::cout << "std::map(without synchronization)" << std::endl;
   std::map<std::string, size_t> std_m;
-  run_test(test_multithreading_insert, std_m, 1000);
+  run_test(test_multithreading_insert, std_m, NUMBER_OF_MAP_ELEMENTS);
   std::cout << std::endl;
 
   std::cout << "t1::map" << std::endl;
   t1::map<std::string, size_t> t1_m;
-  run_test(test_multithreading_insert, t1_m, 1000);
+  run_test(test_multithreading_insert, t1_m, NUMBER_OF_MAP_ELEMENTS);
   std::cout << std::endl;
 
   std::cout << "t3::map" << std::endl;
   t3::map<std::string, size_t> t3_m;
-  run_test(test_multithreading_insert, t3_m, 1000);
+  run_test(test_multithreading_insert, t3_m, NUMBER_OF_MAP_ELEMENTS);
   std::cout << "****************************************" << std::endl;
 
-  test_access test_multithreading_access(100);
+  static const size_t MAP_VALUE = 0xFF;
+  test_access test_multithreading_access(NUMBER_OF_THREADS);
 
   std::cout << "std::map(without synchronization)" << std::endl;
-  run_test(test_multithreading_access, std_m, 0xFF);
+  run_test(test_multithreading_access, std_m, MAP_VALUE);
   std::cout << std::endl;
 
   std::cout << "t1::map" << std::endl;
-  run_test(test_multithreading_access, t1_m, 0xFF);
+  run_test(test_multithreading_access, t1_m, MAP_VALUE);
   std::cout << std::endl;
 
   std::cout << "t3::map" << std::endl;
-  run_test(test_multithreading_access, t3_m, 0xFF);
+  run_test(test_multithreading_access, t3_m, MAP_VALUE);
   std::cout << "****************************************" << std::endl;
 
 
