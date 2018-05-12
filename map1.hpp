@@ -15,7 +15,9 @@ namespace t1
  *  Попытка получить выйгрыш над std::unordered_map в производительности
  *  за счет распараллеливания доступа
  */
-template<typename _Key, typename _Value, typename mutex_type=std::mutex, size_t _Super_bucket_number=10>
+template<typename _Key, typename _Value,
+         typename _Mutex_type=std::mutex,
+         size_t _NUMBER_SUPER_BUCKETS=10>
 class map
 {
 public:
@@ -24,7 +26,7 @@ public:
 
   struct super_bucket
   {
-    mutable mutex_type  m;
+    mutable _Mutex_type  m;
     bucket_data_model v;
   };
 
@@ -44,13 +46,13 @@ public:
       iterator operator++()
       {
         auto& sb = base_.get_interval(interval_);
-        std::lock_guard<mutex_type> lock(sb.m);
+        std::lock_guard<_Mutex_type> lock(sb.m);
 
         if ( ptr_ != sb.v.end() ) {
           ++ptr_;
         } else {
           auto& sb = base_.get_interval(++interval_);
-          std::lock_guard<mutex_type> lock(sb.m);
+          std::lock_guard<_Mutex_type> lock(sb.m);
           ptr_= sb.v.begin();
         }
         return *this;
@@ -60,13 +62,13 @@ public:
       {
         iterator i = *this;
         auto& sb = base_.get_interval(interval_);
-        std::lock_guard<mutex_type> lock(sb.m);
+        std::lock_guard<_Mutex_type> lock(sb.m);
 
         if ( ptr_ != sb.v.end() ) {
           ++ptr_;
         } else {
           auto& sb = base_.get_interval(++interval_);
-          std::lock_guard<mutex_type> lock(sb.m);
+          std::lock_guard<_Mutex_type> lock(sb.m);
           ptr_= sb.v.begin();
         }
         return i;
@@ -147,10 +149,9 @@ public:
     size_t hash_level1 = std::hash<_Key>{}(val.first);
     size_t n_interval = hash_level1 % super_bucket_count_;
     auto& super_bucket = intervals_[n_interval];
-    {
-      std::lock_guard<mutex_type> lock(super_bucket.m);
-      super_bucket.v[hash_level1] = val.second;
-    }
+
+    std::lock_guard<_Mutex_type> lock(super_bucket.m);
+    super_bucket.v[hash_level1] = val.second;
   }
 
   size_type erase(const key_type& val)
@@ -159,7 +160,7 @@ public:
     size_t n_interval = hash_level1 % super_bucket_count_;
     auto& super_bucket = intervals_[n_interval];
 
-    std::lock_guard<mutex_type> lock(super_bucket.m);
+    std::lock_guard<_Mutex_type> lock(super_bucket.m);
     size_t n_el = super_bucket.v.erase(hash_level1);
     return n_el;
   }
@@ -170,7 +171,7 @@ public:
     size_t hash_level1 = std::hash<_Key>{}(k);
     size_t n_interval = hash_level1 % super_bucket_count_;
 
-    std::lock_guard<mutex_type> lock(intervals_[n_interval].m);
+    std::lock_guard<_Mutex_type> lock(intervals_[n_interval].m);
     std::pair<size_t, _Value> p;
     p.first = hash_level1;
     auto it = intervals_[n_interval].v.insert(p);
@@ -189,10 +190,10 @@ public:
 
   size_t size() noexcept
   {
-    std::lock_guard<mutex_type> lock(total_mutex_);
+    std::lock_guard<_Mutex_type> lock(total_mutex_);
     size_t s = 0;
-    for (auto it = intervals_.begin(); it!= intervals_.end(); ++it) {
-      s+= it->v.size();
+    for (auto& it : intervals_) {
+      s+= it.v.size();
     }
 
     return s;
@@ -201,7 +202,7 @@ public:
   //Buckets:
   size_t bucket_count() const noexcept
   {
-    std::lock_guard<mutex_type> lock(total_mutex_);
+    std::lock_guard<_Mutex_type> lock(total_mutex_);
     return intervals_.size();
   }
 
@@ -210,7 +211,7 @@ public:
   {
     for (auto& it : intervals_) {
       {
-        std::lock_guard<mutex_type> lock(it.m);
+        std::lock_guard<_Mutex_type> lock(it.m);
         it.v.reserve(n);
       }
     }
@@ -223,16 +224,16 @@ public:
   {
     for (auto& it : intervals_) {
       {
-        std::lock_guard<mutex_type> lock(it.m);
+        std::lock_guard<_Mutex_type> lock(it.m);
         it.v.rehash(n);
       }
     }
   }
 
 private:
-  static const size_t super_bucket_count_ = _Super_bucket_number;
+  static const size_t super_bucket_count_ = _NUMBER_SUPER_BUCKETS;
   std::vector< super_bucket > intervals_;
-  mutable mutex_type total_mutex_;
+  mutable _Mutex_type total_mutex_;
 };
 
 }

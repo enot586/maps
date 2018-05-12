@@ -73,6 +73,39 @@ struct test_access
   }
 };
 
+struct test_access_erase
+{
+  std::vector< std::future<bool> > tasks;
+
+  test_access_erase( size_t thn ) : tasks(thn)
+  {  }
+
+  ~test_access_erase() = default;
+
+  std::string caption()
+  { return "Test access"; }
+
+  template <typename T>
+  void run(T& m, size_t)
+  {
+    for (auto& it: tasks) {
+      it = std::async( &test_access_erase::access_erase<T>, this, std::ref(m) );
+    }
+
+    for (auto& it: tasks)
+      it.get();
+  }
+
+  template <typename T>
+  bool access_erase(T& m)
+  {
+    for (auto& it : m) {
+
+    }
+    return true;
+  }
+};
+
 template< typename test_type,
           typename container_type,
           typename... Args>
@@ -83,12 +116,11 @@ void run_test(test_type& test, container_type& m, Args... args)
   system_clock::time_point tp1 = system_clock::now();
 
   {
-    test.run(m, args...);
+     test.run(m, args...);
   }
 
   system_clock::time_point tp2 = system_clock::now();
   std::cout << "members : " << m.size() << std::endl;
   std::cout << test.caption() << " duration: " << duration_cast<milliseconds>(tp2-tp1).count() << " milliseconds" << std::endl;
 }
-
 #endif // TEST_HPP
