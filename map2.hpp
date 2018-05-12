@@ -1,13 +1,16 @@
 #ifndef TMAP2_H
 #define TMAP2_H
 
+#include <mutex>
+#include <list>
+
 namespace t2
 {
 
 /**
  *  Второй вариант трактовки условия:
  *  Реализация потокобезопасного контейнера превосходящего по производительности только std::map,
- *  без использования сторонних инструментов(т.к. std::unordered_map из коробки делает почти все что нужно)
+ *  без использования сторонних инструментов(т.к. std::unordered_map "из коробки" делает почти все что нужно)
  */
 template<typename _Key, typename _Value>
 class map
@@ -20,6 +23,13 @@ public:
   using key_type    = _Key;
   using size_type   = size_t;
   using value_type  = std::pair< _Key, _Value >;
+
+  template< typename __Value, typename mutex_type>
+  struct bucket_type
+  {
+    mutex_type m;
+    std::list< __Value > list;
+  };
 
   map()
   {  }
@@ -83,7 +93,6 @@ public:
   { }
 
 private:
-
   std::mutex total_mutex;
   size_t total_elements_count;
 };

@@ -12,6 +12,7 @@ QMAKE_CXXFLAGS += -std=c++14
 SOURCES += main.cpp
 
 HEADERS += \
+    \usr\include\boost\
     test.hpp \
     map3.hpp \
     map2.hpp \

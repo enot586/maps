@@ -20,8 +20,8 @@ class map
 {
 
 public:
-  using iterator = std::iterator<std::forward_iterator_tag, _Value>;
-  using const_iterator = std::iterator<std::forward_iterator_tag, const _Value>;
+  using iterator = std::iterator<std::bidirectional_iterator_tag, _Value>;
+  using const_iterator = std::iterator<std::bidirectional_iterator_tag, const _Value>;
 
   using key_type    = _Key;
   using size_type   = size_t;
@@ -44,7 +44,7 @@ public:
 
   //Iterators:
   iterator begin() noexcept
-  { return intervals[0].v.begin(); }
+  { return intervals.begin(); }
 
   iterator end() noexcept
   { return intervals.end(); }

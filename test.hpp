@@ -4,19 +4,32 @@
 #include <future>
 #include <chrono>
 
-template <typename T>
-struct test
+
+struct test_insert
 {
   std::vector< std::future<bool> > tasks;
 
-  test(T& m, size_t thn, size_t s) : tasks(thn)
+  test_insert( size_t thn ) : tasks(thn)
+  {  }
+
+  ~test_insert() = default;
+
+  std::string caption()
+  { return "Test insertion"; }
+
+  template <typename T>
+  void run(T& m, size_t s)
   {
     size_t i = 0;
     for (auto& it: tasks) {
-      it = std::async(&test::insertion, this, std::ref(m), std::string("task"), (i++)*s, s);
+      it = std::async(&test_insert::insertion<T>, this, std::ref(m), std::string("task"), (i++)*s, s);
     }
+
+    for (auto& it: tasks)
+      it.get();
   }
 
+  template <typename T>
   bool insertion(T& m, const std::string& name, size_t offset, size_t n)
   {
     for (size_t i = offset; i < (n+offset); ++i) {
@@ -28,26 +41,59 @@ struct test
     return true;
   }
 
-  ~test()
+};
+
+
+struct test_access
+{
+  std::vector< std::future<bool> > tasks;
+
+  test_access( size_t thn ) : tasks(thn)
+  {  }
+
+  ~test_access() = default;
+
+  std::string caption()
+  { return "Test access"; }
+
+  template <typename T>
+  void run(T& m, size_t v)
   {
+    for (auto& it: tasks) {
+      it = std::async( &test_access::access<T>, this, std::ref(m), v );
+    }
+
     for (auto& it: tasks)
       it.get();
   }
+
+  template <typename T>
+  bool access(T& m, size_t v)
+  {
+    for (auto& it : m) {
+      it.second = v;
+    }
+
+    return true;
+  }
+
 };
 
-template<typename T>
-void TestInsert(T& m)
+template< typename test_type,
+          typename container_type,
+          typename... Args>
+void run_test(test_type& test, container_type& m, Args... args)
 {
   using namespace std::chrono;
 
   system_clock::time_point tp1 = system_clock::now();
+
   {
-    test<T>(m, 10, 100000);
+    test.run(m, args...);
   }
+
   system_clock::time_point tp2 = system_clock::now();
-  std::cout << "insertion test" << std::endl;
-  std::cout << "elements : " << m.size() << std::endl;
-  std::cout << "Duration: " << duration_cast<milliseconds>(tp2-tp1).count() << " milliseconds" << std::endl;
+  std::cout << test.caption() << " duration: " << duration_cast<milliseconds>(tp2-tp1).count() << " milliseconds" << std::endl;
 }
 
 #endif // TEST_HPP
