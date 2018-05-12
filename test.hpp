@@ -43,7 +43,6 @@ struct test_insert
 
 };
 
-
 struct test_access
 {
   std::vector< std::future<bool> > tasks;
@@ -79,6 +78,8 @@ struct test_access
 
 };
 
+
+
 template< typename test_type,
           typename container_type,
           typename... Args>
@@ -93,6 +94,7 @@ void run_test(test_type& test, container_type& m, Args... args)
   }
 
   system_clock::time_point tp2 = system_clock::now();
+  std::cout << "members : " << m.size() << std::endl;
   std::cout << test.caption() << " duration: " << duration_cast<milliseconds>(tp2-tp1).count() << " milliseconds" << std::endl;
 }
 
