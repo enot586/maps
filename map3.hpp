@@ -176,13 +176,16 @@ public:
     threadsafe_adapter<std::unordered_map<__Key,__Value>, mutex_type>::threadsafe_adapter(m)
   {  }
 
-  map(const map& v) :
-    threadsafe_adapter<std::unordered_map<__Key,__Value>, mutex_type>::threadsafe_adapter(m)
-  { m = v.m; }
+  virtual ~map()
+  {
 
-  map(map&& v) :
-    threadsafe_adapter<std::unordered_map<__Key,__Value >, mutex_type>::threadsafe_adapter(m)
-  { m = std::move(m); }
+  }
+
+  map(const map& v) = delete;
+  map& operator=(const map&) = delete;
+
+  map(map&& v) = default;
+  map& operator=(map&& v) = default;
 };
 
 }

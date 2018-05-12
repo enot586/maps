@@ -34,7 +34,7 @@ public:
   map()
   {  }
 
-  ~map()
+  virtual ~map()
   {  }
 
   //Iterators:

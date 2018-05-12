@@ -4,7 +4,6 @@
 #include <future>
 #include <chrono>
 
-
 struct test_insert
 {
   std::vector< std::future<bool> > tasks;
@@ -37,10 +36,8 @@ struct test_insert
       k+= std::to_string(i);
       m[k] = i;
     }
-
     return true;
   }
-
 };
 
 struct test_access
@@ -72,13 +69,9 @@ struct test_access
     for (auto& it : m) {
       it.second = v;
     }
-
     return true;
   }
-
 };
-
-
 
 template< typename test_type,
           typename container_type,

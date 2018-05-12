@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include <map>
-#include <unordered_map>
 
 #include "map1.hpp"
 #include "map2.hpp"
@@ -32,19 +31,19 @@ int main( int /*argc*/, char*[]/*argv[]*/ )
   run_test(test_multithreading_insert, t3_m, NUMBER_OF_MAP_ELEMENTS);
   std::cout << "****************************************" << std::endl;
 
-  static const size_t MAP_VALUE = 0xFF;
+  static const size_t VALUE_TO_SET = 0xFF;
   test_access test_multithreading_access(NUMBER_OF_THREADS);
 
   std::cout << "std::map(without synchronization)" << std::endl;
-  run_test(test_multithreading_access, std_m, MAP_VALUE);
+  run_test(test_multithreading_access, std_m, VALUE_TO_SET);
   std::cout << std::endl;
 
   std::cout << "t1::map" << std::endl;
-  run_test(test_multithreading_access, t1_m, MAP_VALUE);
+  run_test(test_multithreading_access, t1_m, VALUE_TO_SET);
   std::cout << std::endl;
 
   std::cout << "t3::map" << std::endl;
-  run_test(test_multithreading_access, t3_m, MAP_VALUE);
+  run_test(test_multithreading_access, t3_m, VALUE_TO_SET);
   std::cout << "****************************************" << std::endl;
 
 
