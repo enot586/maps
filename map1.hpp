@@ -99,10 +99,10 @@ public:
         return i;
       }
 
-      reference operator*() { return *ptr_; }
-      pointer operator->() { return ptr_; }
-      bool operator==(const iterator& rhs) { return ptr_ == rhs.ptr_; }
-      bool operator!=(const iterator& rhs) { return ptr_ != rhs.ptr_; }
+      _Value* operator->() { return &ptr_->second; }
+      _Value& operator*() { return ptr_->second; }
+      bool operator==(const iterator& rhs) const { return ptr_ == rhs.ptr_; }
+      bool operator!=(const iterator& rhs) const { return ptr_ != rhs.ptr_; }
 
       pointer get_internal_iterator() const { return ptr_; }
       size_t interval() const { return interval_; }
@@ -132,11 +132,23 @@ public:
   virtual ~map()
   {  }
 
+  iterator find_first()
+  {
+    for (auto it = super_buckets.begin(); it != super_buckets.end(); ++it) {
+      if ( it->v.begin() != it->v.end() ) {
+        return iterator(
+                         this, std::distance(super_buckets.begin(), it)-1,
+                         it->v.begin()
+                       );
+      }
+    }
+
+    return end();
+  }
+
   //Iterators:
   iterator begin() noexcept
-  {
-    return iterator( this, 0, super_buckets.begin()->v.begin() );
-  }
+  { return find_first(); }
 
   iterator end() noexcept
   {
@@ -147,9 +159,7 @@ public:
 
   const_iterator cbegin()  noexcept
   {
-    return const_iterator( this,
-                           0,
-                           super_buckets.begin()->v.begin() );
+    return find_first();
   }
 
   const_iterator cend()  noexcept
