@@ -55,9 +55,9 @@ int main( int /*argc*/, char*[]/*argv[]*/ )
   run_test(test_multithreading_access_erase, t1_m, 0);
   std::cout << std::endl;
 
-//  std::cout << "t3::map" << std::endl;
-//  run_test(test_multithreading_access_erase, t3_m, 0);
-//  std::cout << "****************************************" << std::endl;
+  std::cout << "t3::map" << std::endl;
+  run_test(test_multithreading_access_erase, t3_m, 0);
+  std::cout << "****************************************" << std::endl;
 
   return  0;
 }
