@@ -120,7 +120,7 @@ public:
   typedef size_t size_type;
   typedef std::pair< _Key, _Value > value_type;
 
-  map() : intervals_(super_bucket_count_)
+  map() : super_buckets(super_bucket_count_)
   {  }
 
   map(const map&) = delete;
@@ -135,28 +135,28 @@ public:
   //Iterators:
   iterator begin() noexcept
   {
-    return iterator( this, 0, intervals_.begin()->v.begin() );
+    return iterator( this, 0, super_buckets.begin()->v.begin() );
   }
 
   iterator end() noexcept
   {
     return iterator( this,
-                     std::distance( intervals_.begin(), intervals_.end() )-1,
-                     intervals_.end()->v.end() );
+                     std::distance( super_buckets.begin(), super_buckets.end() )-1,
+                     super_buckets.end()->v.end() );
   }
 
   const_iterator cbegin()  noexcept
   {
     return const_iterator( this,
                            0,
-                           intervals_.begin()->v.begin() );
+                           super_buckets.begin()->v.begin() );
   }
 
   const_iterator cend()  noexcept
   {
     return const_iterator( this,
-                           std::distance( intervals_.begin(), intervals_.end() )-1,
-                           intervals_.end()->v.end() );
+                           std::distance( super_buckets.begin(), super_buckets.end() )-1,
+                           super_buckets.end()->v.end() );
   }
 
   //Modifiers:
@@ -164,7 +164,7 @@ public:
   {
     size_t hash_level1 = std::hash<_Key>{}(val.first);
     size_t n_interval = hash_level1 % super_bucket_count_;
-    auto& super_bucket = intervals_[n_interval];
+    auto& super_bucket = super_buckets[n_interval];
 
     std::lock_guard<_Mutex_type> lock(super_bucket.m);
     super_bucket.v[hash_level1] = val.second;
@@ -192,7 +192,7 @@ public:
   {
     size_t hash_level1 = std::hash<_Key>{}(val);
     size_t n_interval = hash_level1 % super_bucket_count_;
-    auto& super_bucket = intervals_[n_interval];
+    auto& super_bucket = super_buckets[n_interval];
 
     std::lock_guard<_Mutex_type> lock(super_bucket.m);
     size_t n_el = super_bucket.v.erase(hash_level1);
@@ -214,15 +214,15 @@ public:
     size_t hash_level1 = std::hash<_Key>{}(k);
     size_t n_interval = hash_level1 % super_bucket_count_;
 
-    std::lock_guard<_Mutex_type> lock(intervals_[n_interval].m);
+    std::lock_guard<_Mutex_type> lock(super_buckets[n_interval].m);
     std::pair<size_t, _Value> p;
     p.first = hash_level1;
-    auto it = intervals_[n_interval].v.insert(p);
+    auto it = super_buckets[n_interval].v.insert(p);
     return (*it.first).second;
   }
 
   super_bucket& get_super_bucket(size_t n)
-  { return intervals_[n]; }
+  { return super_buckets[n]; }
 
   _Value& operator[](key_type&& k)
   { return operator[]( static_cast<const key_type&>(k) ); }
@@ -235,7 +235,7 @@ public:
   {
     std::lock_guard<_Mutex_type> lock(total_mutex_);
     size_t s = 0;
-    for (auto& it : intervals_) {
+    for (auto& it : super_buckets) {
       s+= it.v.size();
     }
 
@@ -246,13 +246,13 @@ public:
   size_t bucket_count() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex_);
-    return intervals_.size();
+    return super_buckets.size();
   }
 
   //Hash policy
   void reserve ( size_t n )
   {
-    for (auto& it : intervals_) {
+    for (auto& it : super_buckets) {
       {
         std::lock_guard<_Mutex_type> lock(it.m);
         it.v.reserve(n);
@@ -265,7 +265,7 @@ public:
 
   void rehash( size_t n )
   {
-    for (auto& it : intervals_) {
+    for (auto& it : super_buckets) {
       {
         std::lock_guard<_Mutex_type> lock(it.m);
         it.v.rehash(n);
@@ -275,7 +275,7 @@ public:
 
 private:
   static const size_t super_bucket_count_ = _NUMBER_SUPER_BUCKETS;
-  std::vector< super_bucket > intervals_;
+  std::vector< super_bucket > super_buckets;
   mutable _Mutex_type total_mutex_;
 };
 

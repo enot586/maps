@@ -179,8 +179,6 @@ template <typename __Key, typename __Value, typename mutex_type=std::mutex>
 class map : public threadsafe_adapter< std::unordered_map<__Key,__Value>, mutex_type >
 {
 public:
-  std::unordered_map<__Key,__Value> m;
-
   map() :
     threadsafe_adapter<std::unordered_map<__Key,__Value>, mutex_type>::threadsafe_adapter(m)
   {  }
@@ -195,6 +193,9 @@ public:
 
   map(map&& v) = default;
   map& operator=(map&& v) = default;
+
+private:
+  std::unordered_map<__Key,__Value> m;
 };
 
 }
