@@ -94,6 +94,13 @@ public:
     return it;
   }
 
+  //Element lookup
+  typename _T::iterator find ( const typename _T::key_type& k )
+  {
+    std::lock_guard<_Mutex_type> lock(total_mutex);
+    return data.find(k);
+  }
+
   //Element access:
   typename _T::mapped_type& operator[](const typename _T::key_type& k)
   {

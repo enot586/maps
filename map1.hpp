@@ -21,7 +21,8 @@ template<typename _Key, typename _Value,
 class map
 {
 public:
-  typedef std::unordered_map<size_t, _Value> bucket_data_model;
+  typedef std::pair<_Key, _Value> value_type;
+  typedef std::unordered_map<size_t, value_type> bucket_data_model;
   typedef typename bucket_data_model::iterator::iterator_category  bucket_iterator_category;
   typedef typename bucket_data_model::const_iterator::iterator_category  bucket_const_iterator_category;
 
@@ -42,75 +43,87 @@ public:
       typedef  typename bucket_data_model::difference_type difference_type;
 
       iterator(map* base, size_t interval, pointer ptr) :
-        base_(base), interval_(interval), ptr_(ptr)  { }
+        base_(base), super_bucket_index_(interval), ptr_(ptr)
+      { }
 
       iterator(const iterator& v) :
         base_( v.base() ),
-        interval_( v.interval() ),
+        super_bucket_index_( v.interval() ),
         ptr_( v.get_internal_iterator() )
-      {  }
+      { }
 
       iterator& operator=(const iterator& v)
       {
         base_ = v.base();
         ptr_ = v.get_internal_iterator();
-        interval_ = v.interval();
+        super_bucket_index_ = v.interval();
         return *this;
       }
 
-      iterator& operator= (iterator&& v)
+      iterator& operator=(iterator&& v)
       {
         this->base_ = std::move(v.base_);
         this->ptr_ = std::move(v.ptr_);
-        this->interval_ = std::move(v.interval_);
+        this->super_bucket_index_ = std::move(v.super_bucket_index_);
         return *this;
       }
 
       iterator operator++()
       {
-        auto& sb = base_->get_super_bucket(interval_);
-        size_t inervals_n = base_->bucket_count();
+        bool next{false};
+        size_t inervals_n;
+        do
+        {
+          {//searching in current super_bucket
+            auto& sb = base_->get_super_bucket(super_bucket_index_);
+            inervals_n = base_->bucket_count();
+            std::lock_guard<_Mutex_type> lock(sb.m);
 
-        std::lock_guard<_Mutex_type> lock(sb.m);
-        if ( ptr_ != sb.v.end() ) {
-          ++ptr_;
-        } else if (interval_ < inervals_n-1) {
-          auto& sb = base_->get_super_bucket(++interval_);
-          std::lock_guard<_Mutex_type> lock(sb.m);
-          ptr_= sb.v.begin();
-        }
+            if (next)
+              ptr_= sb.v.begin();
+
+            if ( ptr_ != sb.v.end() ) {
+
+              if (next)
+                return *this;
+
+              ++ptr_;
+              if ( ptr_ != sb.v.end() )
+                return *this;
+            }
+          }
+
+          //goto next super_bucket
+          if (super_bucket_index_ < inervals_n-1) {
+            ++super_bucket_index_;
+            next = true;
+          } else {
+            return *this;
+          }
+        } while (next);
+
         return *this;
       }
 
       iterator operator++(int)
       {
         iterator i = *this;
-        auto& sb = base_->get_super_bucket(interval_);
-        size_t inervals_n = base_->bucket_count();
-
-        std::lock_guard<_Mutex_type> lock(sb.m);
-        if ( ptr_ != sb.v.end() ) {
-          ++ptr_;
-        } else if (interval_ < inervals_n-1) {
-          auto& sb = base_->get_super_bucket(++interval_);
-          std::lock_guard<_Mutex_type> lock(sb.m);
-          ptr_= sb.v.begin();
-        }
+        operator++();
         return i;
       }
 
-      _Value* operator->() { return &ptr_->second; }
-      _Value& operator*() { return ptr_->second; }
+      map::value_type* operator->(){ return &ptr_->second; }
+      map::value_type& operator*() { return ptr_->second; }
       bool operator==(const iterator& rhs) const { return ptr_ == rhs.ptr_; }
       bool operator!=(const iterator& rhs) const { return ptr_ != rhs.ptr_; }
 
       pointer get_internal_iterator() const { return ptr_; }
-      size_t interval() const { return interval_; }
+      size_t interval() const { return super_bucket_index_; }
       map* base() const { return base_; }
 
     private:
       map* base_;
-      size_t interval_;
+      size_t super_bucket_index_;
       pointer ptr_;
   };
 
@@ -118,7 +131,6 @@ public:
 
   typedef _Key key_type;
   typedef size_t size_type;
-  typedef std::pair< _Key, _Value > value_type;
 
   map() : super_buckets(super_bucket_count_)
   {  }
@@ -132,12 +144,26 @@ public:
   virtual ~map()
   {  }
 
-  iterator find_first()
+  //Element lookup
+  iterator find ( const key_type& k ) {
+    size_t hash_level1 = std::hash<key_type>{}(k);
+    size_t n_interval = hash_level1 % super_bucket_count_;
+    auto& super_bucket = super_buckets[n_interval];
+    auto res = super_bucket.v.find(hash_level1);
+
+    if ( res != super_bucket.v.end() ) {
+      return iterator(this, n_interval, res);
+    }
+
+    return end();
+  }
+
+  iterator find_first() noexcept
   {
     for (auto it = super_buckets.begin(); it != super_buckets.end(); ++it) {
       if ( it->v.begin() != it->v.end() ) {
         return iterator(
-                         this, std::distance(super_buckets.begin(), it)-1,
+                         this, std::distance(super_buckets.begin(), it),
                          it->v.begin()
                        );
       }
@@ -158,9 +184,7 @@ public:
   }
 
   const_iterator cbegin()  noexcept
-  {
-    return find_first();
-  }
+  { return find_first(); }
 
   const_iterator cend()  noexcept
   {
@@ -177,7 +201,7 @@ public:
     auto& super_bucket = super_buckets[n_interval];
 
     std::lock_guard<_Mutex_type> lock(super_bucket.m);
-    super_bucket.v[hash_level1] = val.second;
+    super_bucket.v[hash_level1] = val;
   }
 
   iterator erase(const_iterator position)
@@ -225,10 +249,11 @@ public:
     size_t n_interval = hash_level1 % super_bucket_count_;
 
     std::lock_guard<_Mutex_type> lock(super_buckets[n_interval].m);
-    std::pair<size_t, _Value> p;
+    std::pair<size_t, value_type> p;
     p.first = hash_level1;
+    p.second.first = k;
     auto it = super_buckets[n_interval].v.insert(p);
-    return (*it.first).second;
+    return (it.first)->second.second;
   }
 
   super_bucket& get_super_bucket(size_t n)
@@ -241,7 +266,7 @@ public:
   bool empty() const noexcept
   { return size() == 0; }
 
-  size_t size() noexcept
+  size_t size() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex_);
     size_t s = 0;
