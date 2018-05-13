@@ -68,13 +68,14 @@ public:
 
       iterator operator++()
       {
-        auto& sb = base_->get_interval(interval_);
-        std::lock_guard<_Mutex_type> lock(sb.m);
+        auto& sb = base_->get_super_bucket(interval_);
+        size_t inervals_n = base_->bucket_count();
 
+        std::lock_guard<_Mutex_type> lock(sb.m);
         if ( ptr_ != sb.v.end() ) {
           ++ptr_;
-        } else {
-          auto& sb = base_->get_interval(++interval_);
+        } else if (interval_ < inervals_n-1) {
+          auto& sb = base_->get_super_bucket(++interval_);
           std::lock_guard<_Mutex_type> lock(sb.m);
           ptr_= sb.v.begin();
         }
@@ -84,13 +85,13 @@ public:
       iterator operator++(int)
       {
         iterator i = *this;
-        auto& sb = base_->get_interval(interval_);
+        auto& sb = base_->get_super_bucket(interval_);
+        size_t inervals_n = base_->bucket_count();
         std::lock_guard<_Mutex_type> lock(sb.m);
-
         if ( ptr_ != sb.v.end() ) {
           ++ptr_;
-        } else {
-          auto& sb = base_->get_interval(++interval_);
+        } else if (interval_ < inervals_n-1) {
+          auto& sb = base_->get_super_bucket(++interval_);
           std::lock_guard<_Mutex_type> lock(sb.m);
           ptr_= sb.v.begin();
         }
@@ -118,7 +119,7 @@ public:
     typedef  typename bucket_data_model::const_iterator  self_type;
     typedef  typename bucket_data_model::value_type      value_type;
     typedef  typename bucket_data_model::value_type&     reference;
-    typedef  typename bucket_data_model::const_iterator  pointer;
+    typedef  typename bucket_data_model::iterator        pointer;
     typedef  bucket_const_iterator_category              iterator_category;
     typedef  typename bucket_data_model::difference_type difference_type;
 
@@ -159,13 +160,14 @@ public:
 
     const_iterator operator++()
     {
-      auto& sb = base_->get_interval(interval_);
-      std::lock_guard<_Mutex_type> lock(sb.m);
+      auto& sb = base_->get_super_bucket(interval_);
+      size_t inervals_n = base_->bucket_count();
 
+      std::lock_guard<_Mutex_type> lock(sb.m);
       if ( ptr_ != sb.v.end() ) {
         ++ptr_;
-      } else {
-        auto& sb = base_->get_interval(++interval_);
+      } else if (interval_ < inervals_n-1) {
+        auto& sb = base_->get_super_bucket(++interval_);
         std::lock_guard<_Mutex_type> lock(sb.m);
         ptr_= sb.v.begin();
       }
@@ -175,13 +177,13 @@ public:
     const_iterator operator++(int)
     {
       iterator i = *this;
-      auto& sb = base_->get_interval(interval_);
+      auto& sb = base_->get_super_bucket(interval_);
+      size_t inervals_n = base_->bucket_count();
       std::lock_guard<_Mutex_type> lock(sb.m);
-
       if ( ptr_ != sb.v.end() ) {
         ++ptr_;
-      } else {
-        auto& sb = base_->get_interval(++interval_);
+      } else if (interval_ < inervals_n-1) {
+        auto& sb = base_->get_super_bucket(++interval_);
         std::lock_guard<_Mutex_type> lock(sb.m);
         ptr_= sb.v.begin();
       }
@@ -259,10 +261,20 @@ public:
 
   iterator erase(const_iterator position)
   {
-    auto& sb = get_interval( position.interval() );
-    std::lock_guard<_Mutex_type> lock(sb.m);
-    auto it = sb.v.erase( position.get_internal_iterator() );
-    return iterator(this, position.interval(), it);
+    auto& sb = get_super_bucket( position.interval() );
+    auto it = position.get_internal_iterator();
+
+    {
+      std::lock_guard<_Mutex_type> lock(sb.m);
+      it = sb.v.erase( position.get_internal_iterator() );
+    }
+
+    iterator result_it(this, position.interval(), it);
+
+    if ( it == sb.v.end() )
+      ++result_it;
+
+    return result_it;
   }
 
   size_type erase(const key_type& val)
@@ -298,7 +310,7 @@ public:
     return (*it.first).second;
   }
 
-  super_bucket& get_interval(size_t n)
+  super_bucket& get_super_bucket(size_t n)
   { return intervals_[n]; }
 
   _Value& operator[](key_type&& k)

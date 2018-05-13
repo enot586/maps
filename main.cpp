@@ -4,7 +4,6 @@
 #include <map>
 
 #include "map1.hpp"
-#include "map2.hpp"
 #include "map3.hpp"
 #include "test.hpp"
 
