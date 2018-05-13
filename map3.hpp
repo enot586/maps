@@ -29,31 +29,31 @@ public:
     return data.begin();
   }
 
-  auto end() const noexcept
+  typename _T::iterator end() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.end();
   }
 
-  auto cbegin() const noexcept
+  typename _T::const_iterator cbegin() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.cbegin();
   }
 
-  auto cbegin ( typename _T::size_type n )
+  typename _T::const_iterator cbegin ( typename _T::size_type n )
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.cbegin(n);
   }
 
-  auto cend() const noexcept
+  typename _T::const_iterator cend() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.cend();
   }
 
-  auto cend ( typename _T::size_type n )
+  typename _T::const_iterator cend ( typename _T::size_type n )
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return cend(n);
@@ -73,19 +73,19 @@ public:
     return data.insert(val);
   }
 
-  auto erase(const typename _T::key_type& val)
+  typename _T::size_type erase(const typename _T::key_type& val)
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.erase(val);
   }
 
-  auto erase(typename _T::const_iterator position)
+  typename _T::iterator erase(typename _T::const_iterator position)
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.erase(position);
   }
 
-  auto erase(typename _T::iterator first, typename _T::iterator last)
+  typename _T::iterator erase(typename _T::iterator first, typename _T::iterator last)
   {
     auto it = first;
     for (; it != last; ++it) {
@@ -95,25 +95,25 @@ public:
   }
 
   //Element access:
-  auto& operator[](const typename _T::key_type& k)
+  typename _T::mapped_type& operator[](const typename _T::key_type& k)
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data[k];
   }
 
-  auto& operator[](typename _T::key_type&& k)
+  typename _T::mapped_type& operator[](typename _T::key_type&& k)
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data[k];
   }
 
-  auto& at ( const typename _T::value_type& k )
+  typename _T::mapped_type& at ( const typename _T::value_type& k )
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.at(k);
   }
 
-  const auto& at ( const typename _T::value_type& k ) const
+  const typename _T::mapped_type& at ( const typename _T::value_type& k ) const
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.at(k);
@@ -126,26 +126,26 @@ public:
     return data.empty();
   }
 
-  auto size() const noexcept
+  typename _T::size_type size() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.size();
   }
 
-  auto max_size() const noexcept
+  typename _T::size_type max_size() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.max_size();
   }
 
   //Buckets:
-  auto bucket_count() const noexcept
+  typename _T::size_type bucket_count() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.bucket_count();
   }
 
-  auto max_bucket_count() const noexcept
+  typename _T::size_type max_bucket_count() const noexcept
   {
     std::lock_guard<_Mutex_type> lock(total_mutex);
     return data.max_bucket_count();
