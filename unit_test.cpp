@@ -48,33 +48,31 @@ BOOST_AUTO_TEST_CASE(MapSimpleInsertErase)
   }
 }
 
-BOOST_AUTO_TEST_CASE(MapSimpleIterator)
+template<typename _Map>
+void test_iterators(_Map& m)
 {
   std::vector<string> varr{ "v1", "v2", "v3" };
   std::vector<string> karr{ "value1", "value2", "value3" };
 
+  m[ karr[0] ] = varr[0];
+  m[ karr[1] ] = varr[1];
+  m[ karr[2] ] = varr[2];
+
+  for (auto& it : karr) {
+    BOOST_CHECK( m.find(it) != m.end() );
+  }
+}
+
+BOOST_AUTO_TEST_CASE(MapSimpleIterator)
+{
   {
     t1::map<string, string> m;
-
-    m[ karr[0] ] = varr[0];
-    m[ karr[1] ] = varr[1];
-    m[ karr[2] ] = varr[2];
-
-    for (auto& it : karr) {
-      BOOST_CHECK( m.find(it) != m.end() );
-    }
+    test_iterators(m);
   }
 
   {
     t3::map<string, string> m;
-
-    m[ karr[0] ] = varr[0];
-    m[ karr[1] ] = varr[1];
-    m[ karr[2] ] = varr[2];
-
-    for (auto& it :karr) {
-      BOOST_CHECK( m.find(it) != m.end() );
-    }
+    test_iterators(m);
   }
 
 }
