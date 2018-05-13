@@ -46,7 +46,7 @@ int main( int /*argc*/, char*[]/*argv[]*/ )
   run_test(test_multithreading_access, t3_m, VALUE_TO_SET);
   std::cout << "****************************************" << std::endl;
 
-  test_access test_multithreading_access_erase(NUMBER_OF_THREADS);
+  test_access_erase test_multithreading_access_erase(NUMBER_OF_THREADS);
 
   std::cout << "std::map(without synchronization)" << std::endl;
   run_test(test_multithreading_access_erase, std_m, 0);
@@ -56,9 +56,9 @@ int main( int /*argc*/, char*[]/*argv[]*/ )
   run_test(test_multithreading_access_erase, t1_m, 0);
   std::cout << std::endl;
 
-  std::cout << "t3::map" << std::endl;
-  run_test(test_multithreading_access_erase, t3_m, 0);
-  std::cout << "****************************************" << std::endl;
+//  std::cout << "t3::map" << std::endl;
+//  run_test(test_multithreading_access_erase, t3_m, 0);
+//  std::cout << "****************************************" << std::endl;
 
   return  0;
 }

@@ -14,7 +14,6 @@ SOURCES += main.cpp
 HEADERS += \
     test.hpp \
     map3.hpp \
-    map2.hpp \
     map1.hpp \
 
 

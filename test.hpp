@@ -83,13 +83,16 @@ struct test_access_erase
   ~test_access_erase() = default;
 
   std::string caption()
-  { return "Test access"; }
+  { return "Test access-erase"; }
 
   template <typename T>
-  void run(T& m, size_t)
+  void run(T& m, size_t v)
   {
-    for (auto& it: tasks) {
-      it = std::async( &test_access_erase::access_erase<T>, this, std::ref(m) );
+    auto it = tasks.begin();
+    *it = std::async( &test_access_erase::_erase<T>, this, std::ref(m), v );
+
+    for (++it; it!= tasks.end(); ++it) {
+      *it = std::async( &test_access_erase::_access<T>, this, std::ref(m), v );
     }
 
     for (auto& it: tasks)
@@ -97,10 +100,22 @@ struct test_access_erase
   }
 
   template <typename T>
-  bool access_erase(T& m)
+  bool _erase(T& m, size_t)
+  {
+    using namespace std::chrono;
+    std::this_thread::sleep_for( milliseconds(1) );
+    auto it = m.cbegin();
+    for (; it != m.cend(); ) {
+      it = m.erase(it);
+    }
+    return true;
+  }
+
+  template <typename T>
+  bool _access(T& m, size_t v)
   {
     for (auto& it : m) {
-
+      it.second = v;
     }
     return true;
   }

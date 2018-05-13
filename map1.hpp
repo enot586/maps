@@ -23,11 +23,12 @@ class map
 public:
   typedef std::unordered_map<size_t, _Value> bucket_data_model;
   typedef typename bucket_data_model::iterator::iterator_category  bucket_iterator_category;
+  typedef typename bucket_data_model::const_iterator::iterator_category  bucket_const_iterator_category;
 
   struct super_bucket
   {
     mutable _Mutex_type  m;
-    bucket_data_model v;
+    bucket_data_model    v;
   };
 
   class iterator
@@ -40,18 +41,40 @@ public:
       typedef  bucket_iterator_category                    iterator_category;
       typedef  typename bucket_data_model::difference_type difference_type;
 
-      iterator(map& base, size_t interval, pointer ptr) :
+      iterator(map* base, size_t interval, pointer ptr) :
         base_(base), interval_(interval), ptr_(ptr)  { }
+
+      iterator(const iterator& v) :
+        base_( v.base() ),
+        interval_( v.interval() ),
+        ptr_( v.get_internal_iterator() )
+      {  }
+
+      iterator& operator=(const iterator& v)
+      {
+        base_ = v.base();
+        ptr_ = v.get_internal_iterator();
+        interval_ = v.interval();
+        return *this;
+      }
+
+      iterator& operator= (iterator&& v)
+      {
+        this->base_ = std::move(v.base_);
+        this->ptr_ = std::move(v.ptr_);
+        this->interval_ = std::move(v.interval_);
+        return *this;
+      }
 
       iterator operator++()
       {
-        auto& sb = base_.get_interval(interval_);
+        auto& sb = base_->get_interval(interval_);
         std::lock_guard<_Mutex_type> lock(sb.m);
 
         if ( ptr_ != sb.v.end() ) {
           ++ptr_;
         } else {
-          auto& sb = base_.get_interval(++interval_);
+          auto& sb = base_->get_interval(++interval_);
           std::lock_guard<_Mutex_type> lock(sb.m);
           ptr_= sb.v.begin();
         }
@@ -61,13 +84,13 @@ public:
       iterator operator++(int)
       {
         iterator i = *this;
-        auto& sb = base_.get_interval(interval_);
+        auto& sb = base_->get_interval(interval_);
         std::lock_guard<_Mutex_type> lock(sb.m);
 
         if ( ptr_ != sb.v.end() ) {
           ++ptr_;
         } else {
-          auto& sb = base_.get_interval(++interval_);
+          auto& sb = base_->get_interval(++interval_);
           std::lock_guard<_Mutex_type> lock(sb.m);
           ptr_= sb.v.begin();
         }
@@ -79,24 +102,105 @@ public:
       bool operator==(const iterator& rhs) { return ptr_ == rhs.ptr_; }
       bool operator!=(const iterator& rhs) { return ptr_ != rhs.ptr_; }
 
-    protected:
-      map& base_;
+      pointer get_internal_iterator() const { return ptr_; }
+      size_t interval() const { return interval_; }
+      map* base() const { return base_; }
+
+    private:
+      map* base_;
       size_t interval_;
       pointer ptr_;
   };
 
-  class const_iterator: public iterator
+  class const_iterator
   {
-    typedef  typename bucket_data_model::iterator        self_type;
+  public:
+    typedef  typename bucket_data_model::const_iterator  self_type;
     typedef  typename bucket_data_model::value_type      value_type;
     typedef  typename bucket_data_model::value_type&     reference;
-    typedef  typename bucket_data_model::iterator        pointer;
-    typedef  bucket_iterator_category                    iterator_category;
+    typedef  typename bucket_data_model::const_iterator  pointer;
+    typedef  bucket_const_iterator_category              iterator_category;
     typedef  typename bucket_data_model::difference_type difference_type;
 
-    const_iterator(map& base, size_t interval, pointer ptr) :
-      iterator(base, interval, ptr)
-    { }
+    const_iterator(map* base, size_t interval, pointer ptr) :
+      base_(base), interval_(interval), ptr_(ptr)  { }
+
+    const_iterator(const const_iterator& v) :
+      base_( v.base() ),
+      interval_( v.interval() ),
+      ptr_( v.get_internal_iterator() )
+    {
+
+    }
+
+    const_iterator& operator=(const const_iterator& v)
+    {
+      base_ =v.base();
+      ptr_ = v.get_internal_iterator();
+      interval_ = v.interval();
+      return *this;
+    }
+
+    const_iterator& operator=(const iterator& v)
+    {
+      base_ = v.base();
+      ptr_ = v.get_internal_iterator();
+      interval_ = v.interval();
+      return *this;
+    }
+
+    const_iterator& operator= (const_iterator&& v)
+    {
+      base_ = std::move(v.base_);
+      ptr_ = std::move(v.ptr_);
+      interval_ = std::move(v.interval_);
+      return *this;
+    }
+
+    const_iterator operator++()
+    {
+      auto& sb = base_->get_interval(interval_);
+      std::lock_guard<_Mutex_type> lock(sb.m);
+
+      if ( ptr_ != sb.v.end() ) {
+        ++ptr_;
+      } else {
+        auto& sb = base_->get_interval(++interval_);
+        std::lock_guard<_Mutex_type> lock(sb.m);
+        ptr_= sb.v.begin();
+      }
+      return *this;
+    }
+
+    const_iterator operator++(int)
+    {
+      iterator i = *this;
+      auto& sb = base_->get_interval(interval_);
+      std::lock_guard<_Mutex_type> lock(sb.m);
+
+      if ( ptr_ != sb.v.end() ) {
+        ++ptr_;
+      } else {
+        auto& sb = base_->get_interval(++interval_);
+        std::lock_guard<_Mutex_type> lock(sb.m);
+        ptr_= sb.v.begin();
+      }
+      return i;
+    }
+
+    reference operator*() { return *ptr_; }
+    pointer operator->() { return ptr_; }
+    bool operator==(const const_iterator& rhs) { return ptr_ == rhs.ptr_; }
+    bool operator!=(const const_iterator& rhs) { return ptr_ != rhs.ptr_; }
+
+    pointer get_internal_iterator() const { return ptr_; }
+    size_t interval() const { return interval_; }
+    map* base() const { return base_; }
+
+  private:
+    map* base_;
+    size_t interval_;
+    pointer ptr_;
   };
 
   typedef _Key key_type;
@@ -118,33 +222,32 @@ public:
   //Iterators:
   iterator begin() noexcept
   {
-    return iterator( *this, 0, intervals_.begin()->v.begin() );
+    return iterator( this, 0, intervals_.begin()->v.begin() );
   }
 
   iterator end() noexcept
   {
-    return iterator( *this,
+    return iterator( this,
                      std::distance( intervals_.begin(), intervals_.end() )-1,
                      intervals_.end()->v.end() );
   }
 
-  const_iterator cbegin() const noexcept
+  const_iterator cbegin()  noexcept
   {
-    return const_iterator( *this,
-                           std::distance( intervals_.begin(), intervals_.end() )-1,
-                           intervals_.end()->v.end() );
+    return const_iterator( this,
+                           0,
+                           intervals_.begin()->v.begin() );
   }
 
-  const_iterator cend() const noexcept
+  const_iterator cend()  noexcept
   {
-    return const_iterator( *this,
+    return const_iterator( this,
                            std::distance( intervals_.begin(), intervals_.end() )-1,
                            intervals_.end()->v.end() );
-
   }
 
   //Modifiers:
-  void insert( const value_type& val )
+  void insert(const value_type& val)
   {
     size_t hash_level1 = std::hash<_Key>{}(val.first);
     size_t n_interval = hash_level1 % super_bucket_count_;
@@ -152,6 +255,14 @@ public:
 
     std::lock_guard<_Mutex_type> lock(super_bucket.m);
     super_bucket.v[hash_level1] = val.second;
+  }
+
+  iterator erase(const_iterator position)
+  {
+    auto& sb = get_interval( position.interval() );
+    std::lock_guard<_Mutex_type> lock(sb.m);
+    auto it = sb.v.erase( position.get_internal_iterator() );
+    return iterator(this, position.interval(), it);
   }
 
   size_type erase(const key_type& val)
@@ -163,6 +274,15 @@ public:
     std::lock_guard<_Mutex_type> lock(super_bucket.m);
     size_t n_el = super_bucket.v.erase(hash_level1);
     return n_el;
+  }
+
+  iterator erase ( const_iterator first, const_iterator last )
+  {
+    auto it = first;
+    for (; it != last; ++it) {
+      it = erase(it);
+    }
+    return it;
   }
 
   //Element access:

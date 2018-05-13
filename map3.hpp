@@ -85,6 +85,15 @@ public:
     return data.erase(position);
   }
 
+  auto erase(typename _T::iterator first, typename _T::iterator last)
+  {
+    auto it = first;
+    for (; it != last; ++it) {
+      erase(it);
+    }
+    return it;
+  }
+
   //Element access:
   auto& operator[](const typename _T::key_type& k)
   {
