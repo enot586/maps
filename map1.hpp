@@ -4,6 +4,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 namespace t1
 {
@@ -28,8 +29,21 @@ public:
 
   struct super_bucket
   {
+    std::atomic<size_t> reference_counter;
     mutable _Mutex_type  m;
     bucket_data_model    v;
+
+    super_bucket() : reference_counter(0)
+    {}
+
+    inline bool is_busy()
+    { return reference_counter.load(); }
+
+    inline void inc_ref()
+    { ++reference_counter; }
+
+    inline void dec_ref()
+    { --reference_counter; }
   };
 
   class iterator
@@ -59,6 +73,9 @@ public:
         super_bucket_index_ = v.interval();
         return *this;
       }
+
+      ~iterator()
+      {   }
 
       iterator& operator=(iterator&& v)
       {

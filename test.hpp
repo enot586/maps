@@ -21,7 +21,7 @@ struct test_insert
   {
     size_t i = 0;
     for (auto& it: tasks) {
-      it = std::async(&test_insert::insertion<T>, this, std::ref(m), std::string("task"), (i++)*s, s);
+      it = std::async(std::launch::async, &test_insert::insertion<T>, this, std::ref(m), std::string("task"), (i++)*s, s);
     }
 
     for (auto& it: tasks)
@@ -56,7 +56,7 @@ struct test_access
   void run(T& m, size_t v)
   {
     for (auto& it: tasks) {
-      it = std::async( &test_access::access<T>, this, std::ref(m), v );
+      it = std::async( std::launch::async, &test_access::access<T>, this, std::ref(m), v );
     }
 
     for (auto& it: tasks)
@@ -67,7 +67,7 @@ struct test_access
   bool access(T& m, size_t v)
   {
     for (auto& it : m) {
-      it.second = v;
+       m[it.first] = v;
     }
     return true;
   }
@@ -89,10 +89,10 @@ struct test_access_erase
   void run(T& m, size_t v)
   {
     auto it = tasks.begin();
-    *it = std::async( &test_access_erase::_erase<T>, this, std::ref(m), v );
+    *it = std::async( std::launch::async, &test_access_erase::_erase<T>, this, std::ref(m), v );
 
     for (++it; it!= tasks.end(); ++it) {
-      *it = std::async( &test_access_erase::_access<T>, this, std::ref(m), v );
+      *it = std::async( std::launch::async, &test_access_erase::_access<T>, this, std::ref(m), v );
     }
 
     for (auto& it: tasks)
@@ -115,7 +115,7 @@ struct test_access_erase
   bool _access(T& m, size_t v)
   {
     for (auto& it : m) {
-      it.second = v;
+      m[it.first] = v;
     }
     return true;
   }
